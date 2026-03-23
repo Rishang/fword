@@ -1,0 +1,62 @@
+version: "3"
+
+vars:
+  BINARY: fword
+  CMD: ./cmd/fword
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo "dev"
+  LDFLAGS: '-ldflags "-X main.version={{.VERSION}} -s -w"'
+
+tasks:
+  default:
+    cmds:
+      - task: build
+
+  # Default: build for current platform
+  build:
+    cmds:
+      - go build {{.LDFLAGS}} -o {{.BINARY}} {{.CMD}}
+      - echo "✓  Built ./{{.BINARY}}  ({{.VERSION}})"
+
+  # Install to $GOPATH/bin (or ~/go/bin)
+  install:
+    cmds:
+      - go install {{.LDFLAGS}} {{.CMD}}
+      - echo "✓  Installed fword -> $(go env GOPATH)/bin/fword"
+
+  # Quick dev run
+  run:
+    cmds:
+      - go run {{.CMD}} {{.ARGS}}
+
+  # Cross-compile for common platforms
+  dist:
+    cmds:
+      - mkdir -p dist
+      - GOOS=linux GOARCH=amd64 go build {{.LDFLAGS}} -o dist/fword-linux-amd64 {{.CMD}}
+      - GOOS=linux GOARCH=arm64 go build {{.LDFLAGS}} -o dist/fword-linux-arm64 {{.CMD}}
+      - GOOS=darwin GOARCH=amd64 go build {{.LDFLAGS}} -o dist/fword-darwin-amd64 {{.CMD}}
+      - GOOS=darwin GOARCH=arm64 go build {{.LDFLAGS}} -o dist/fword-darwin-arm64 {{.CMD}}
+      - GOOS=windows GOARCH=amd64 go build {{.LDFLAGS}} -o dist/fword-windows-amd64.exe {{.CMD}}
+      - echo "✓  Binaries in ./dist/"
+      - ls -lh dist/
+
+  # Run tests
+  test:
+    cmds:
+      - go test ./...
+
+  # Tidy dependencies
+  tidy:
+    cmds:
+      - go mod tidy
+
+  # Print current config path
+  config-path:
+    cmds:
+      - go run {{.CMD}} config show 2>/dev/null || true
+
+  clean:
+    cmds:
+      - rm -f {{.BINARY}}
+      - rm -rf dist/
