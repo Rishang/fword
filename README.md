@@ -93,13 +93,12 @@ $ fword
 | `api_key`         | —                           | Authentication token for the provider                 |
 | `model`           | `claude-sonnet-4-20250514`  | Model name                                            |
 | `base_url`        | *(provider default)*        | Override API endpoint (proxies, local models)         |
-| `capture_output`  | `false`                     | Re-run failed command to capture its output (⚠️ side effects) |
 | `max_tokens`      | `512`                       | Max tokens in AI response                             |
 
 ```bash
 fword config show                       # view all settings
 fword config set --provider openrouter --api-token sk-or-xxxx --base-url https://openrouter.ai/api/v1 --model openai/gpt-5.4-mini
-fword config set capture_output true    # richer AI context (idempotent cmds only)
+fword --rerun                           # richer AI context (idempotent cmds only)
 ```
 
 ---
@@ -109,6 +108,7 @@ fword config set capture_output true    # richer AI context (idempotent cmds onl
 ```bash
 fword --cmd "kubectl get pods" --exit-code 1
 fword --cmd "pnpm run build" --exit-code 1 --output "Cannot find module 'webpack'"
+fword --cmd "docker compose up" --exit-code 1 --rerun
 fword --cmd "pip install numpy" --exit-code 1
 fword --cmd "cargo build" --exit-code 101 --debug    # show raw AI response
 ```

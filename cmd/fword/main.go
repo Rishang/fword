@@ -37,6 +37,7 @@ func run(args []string) error {
 			&cli.StringFlag{Name: "cmd", Usage: "The failed command text"},
 			&cli.IntFlag{Name: "exit-code", Value: -1, Usage: "The exit code from the failed command"},
 			&cli.StringFlag{Name: "output", Usage: "Captured stdout/stderr from the failed command"},
+			&cli.BoolFlag{Name: "rerun", Usage: "Re-run failed command to capture output (side effects possible)"},
 			&cli.StringFlag{Name: "shell", Usage: "Override shell detection (bash|zsh|fish)"},
 			&cli.BoolFlag{Name: "auto-run", Usage: "Execute suggestion without confirmation prompt"},
 			&cli.BoolFlag{Name: "debug", Usage: "Print raw AI response before parsing"},
@@ -62,7 +63,6 @@ func run(args []string) error {
 							&cli.StringFlag{Name: "model", Usage: "Model name"},
 							&cli.StringFlag{Name: "base-url", Usage: "Override provider API base URL"},
 							&cli.BoolFlag{Name: "auto-run", Usage: "Run suggested command without confirmation"},
-							&cli.BoolFlag{Name: "capture-output", Usage: "Capture command output for better suggestions"},
 							&cli.IntFlag{Name: "max-tokens", Usage: "Max response tokens"},
 						},
 						Action:    runConfigSet,
@@ -135,11 +135,18 @@ func runMain(c *cli.Context) error {
 		cfg.AutoRun = true
 	}
 
+	output := c.String("output")
+	if output == "" && c.Bool("rerun") {
+		// Best-effort: capture command stderr/stdout for richer AI context.
+		captured, _ := captureCommandOutput(shellName, cmd)
+		output = strings.TrimSpace(captured)
+	}
+
 	// Build AI request
 	req := &ai.Request{
 		Command:  cmd,
 		ExitCode: exitCode,
-		Output:   c.String("output"),
+		Output:   output,
 		Shell:    shellName,
 	}
 
@@ -218,12 +225,6 @@ func runConfigSet(c *cli.Context) error {
 		}
 		updated++
 	}
-	if c.IsSet("capture-output") {
-		if err := cfg.Set("capture_output", fmt.Sprintf("%t", c.Bool("capture-output"))); err != nil {
-			return err
-		}
-		updated++
-	}
 	if c.IsSet("max-tokens") {
 		if err := cfg.Set("max_tokens", fmt.Sprintf("%d", c.Int("max-tokens"))); err != nil {
 			return err
@@ -263,7 +264,6 @@ func configShow() error {
 		fmt.Printf("  %-18s %s\n", "base_url", cfg.BaseURL)
 	}
 	fmt.Printf("  %-18s %v\n", "auto_run", cfg.AutoRun)
-	fmt.Printf("  %-18s %v\n", "capture_output", cfg.CaptureOutput)
 	fmt.Printf("  %-18s %d\n", "max_tokens", cfg.MaxTokens)
 	fmt.Println()
 	return nil
@@ -277,7 +277,7 @@ func configSet(key, value string) error {
 	}
 
 	if err := cfg.Set(key, value); err != nil {
-		return fmt.Errorf("%s\n  valid keys: provider, api_key, model, base_url, auto_run, capture_output, max_tokens", err)
+		return fmt.Errorf("%s\n  valid keys: provider, api_key, model, base_url, auto_run, max_tokens", err)
 	}
 
 	if err := config.Save(cfg); err != nil {
@@ -297,6 +297,27 @@ func detectShell() string {
 	return "sh"
 }
 
+func captureCommandOutput(shellName, command string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	exe, args := shellExecArgs(shellName, command)
+	cmd := exec.CommandContext(ctx, exe, args...)
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+func shellExecArgs(shellName, command string) (string, []string) {
+	switch shellName {
+	case "bash", "zsh":
+		return shellName, []string{"-lc", command}
+	case "fish":
+		return "fish", []string{"-c", command}
+	default:
+		return "sh", []string{"-lc", command}
+	}
+}
+
 func printUsage() {
 	fmt.Print(`
 fword — AI shell command corrector
@@ -314,7 +335,7 @@ EXAMPLES:
   fword --shell-init zsh
 
 CONFIG KEYS:
-  provider | api_key | model | base_url | auto_run | capture_output | max_tokens
+  provider | api_key | model | base_url | auto_run | max_tokens
 
 `)
 }

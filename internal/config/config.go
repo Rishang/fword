@@ -35,10 +35,6 @@ type Config struct {
 	// AutoRun skips the confirmation prompt and executes the suggested command immediately
 	AutoRun bool
 
-	// CaptureOutput re-runs the failed command to capture its stderr for richer AI context
-	// WARNING: has side effects — disable for non-idempotent commands
-	CaptureOutput bool
-
 	// MaxTokens caps the AI response length (default 512)
 	MaxTokens int
 }
@@ -114,7 +110,6 @@ func Save(cfg *Config) error {
 	writeField("model", cfg.Model)
 	writeField("base_url", cfg.BaseURL)
 	fmt.Fprintf(&sb, "auto_run: %v\n", cfg.AutoRun)
-	fmt.Fprintf(&sb, "capture_output: %v\n", cfg.CaptureOutput)
 	fmt.Fprintf(&sb, "max_tokens: %d\n", cfg.MaxTokens)
 
 	return os.WriteFile(path, []byte(sb.String()), 0600)
@@ -166,8 +161,6 @@ func (c *Config) set(key, val string) error {
 		c.BaseURL = val
 	case "auto_run":
 		c.AutoRun = val == "true" || val == "1" || val == "yes"
-	case "capture_output":
-		c.CaptureOutput = val == "true" || val == "1" || val == "yes"
 	case "max_tokens":
 		n, err := strconv.Atoi(val)
 		if err != nil || n <= 0 {
