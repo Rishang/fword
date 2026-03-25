@@ -134,7 +134,7 @@ $ fword
 ```bash
 fword config show                       # view all settings
 fword config set --provider openrouter --api-token sk-or-xxxx --base-url https://openrouter.ai/api/v1 --model openai/gpt-5.4-mini
-fword --rerun                           # richer AI context (idempotent cmds only)
+fword --rerun                           # Re-run the command to get output for more accurate AI context (idempotent cmds only)
 ```
 
 ---

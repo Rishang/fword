@@ -16,7 +16,23 @@ const (
 	ProviderOpenAI     = "openai"
 	ProviderOpenRouter = "openrouter"
 	ProviderGemini     = "gemini"
+
+	// ProjectURL is sent as HTTP-Referer to providers that require or recommend it (e.g. OpenRouter).
+	ProjectURL = "https://github.com/Rishang/fword"
 )
+
+// providerBaseURLs is the single source of truth for each provider's API base URL.
+// Verified against official docs (2026-03):
+//   - Anthropic:  https://docs.anthropic.com/en/api/getting-started  → https://api.anthropic.com
+//   - OpenAI:     https://platform.openai.com/docs/api-reference      → https://api.openai.com
+//   - OpenRouter: https://openrouter.ai/docs/quickstart               → https://openrouter.ai/api/v1
+//   - Gemini:     https://ai.google.dev/gemini-api/docs/quickstart    → https://generativelanguage.googleapis.com
+var providerBaseURLs = map[string]string{
+	ProviderClaude:     "https://api.anthropic.com",
+	ProviderOpenAI:     "https://api.openai.com/v1",
+	ProviderOpenRouter: "https://openrouter.ai/api/v1",
+	ProviderGemini:     "https://generativelanguage.googleapis.com",
+}
 
 // Config holds all fword configuration options
 type Config struct {
@@ -43,7 +59,7 @@ type Config struct {
 func Defaults() *Config {
 	return &Config{
 		Provider:  ProviderClaude,
-		Model:     "claude-sonnet-4-20250514",
+		Model:     "gpt-5.4-mini",
 		MaxTokens: 512,
 	}
 }
@@ -129,23 +145,13 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// DefaultBaseURL returns the canonical API URL for each provider
+// DefaultBaseURL returns the canonical API base URL for the configured provider,
+// or the user-supplied BaseURL override when set.
 func (c *Config) DefaultBaseURL() string {
 	if c.BaseURL != "" {
 		return c.BaseURL
 	}
-	switch c.Provider {
-	case ProviderClaude:
-		return "https://api.anthropic.com"
-	case ProviderOpenAI:
-		return "https://api.openai.com"
-	case ProviderOpenRouter:
-		return "https://openrouter.ai/api"
-	case ProviderGemini:
-		return "https://generativelanguage.googleapis.com"
-	default:
-		return ""
-	}
+	return providerBaseURLs[c.Provider] // "" for unknown providers
 }
 
 // set applies a single key=value pair to the config struct

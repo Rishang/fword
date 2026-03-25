@@ -37,7 +37,7 @@ func run(args []string) error {
 			&cli.StringFlag{Name: "cmd", Usage: "The failed command text"},
 			&cli.IntFlag{Name: "exit-code", Value: -1, Usage: "The exit code from the failed command"},
 			&cli.StringFlag{Name: "output", Usage: "Captured stdout/stderr from the failed command"},
-			&cli.BoolFlag{Name: "rerun", Usage: "Re-run failed command to capture output (side effects possible)"},
+			&cli.BoolFlag{Name: "rerun", Aliases: []string{"r"}, Usage: "Re-run failed command to capture output (side effects possible)"},
 			&cli.StringFlag{Name: "shell", Usage: "Override shell detection (bash|zsh|fish)"},
 			&cli.BoolFlag{Name: "auto-run", Usage: "Execute suggestion without confirmation prompt"},
 			&cli.BoolFlag{Name: "debug", Usage: "Print raw AI response before parsing"},
@@ -65,7 +65,7 @@ func run(args []string) error {
 							&cli.BoolFlag{Name: "auto-run", Usage: "Run suggested command without confirmation"},
 							&cli.IntFlag{Name: "max-tokens", Usage: "Max response tokens"},
 						},
-						Action:    runConfigSet,
+						Action: runConfigSet,
 					},
 				},
 				Action: runConfigShow,
@@ -174,7 +174,7 @@ func runMain(c *cli.Context) error {
 		fmt.Printf("\n\033[90m[debug] raw response:\n%s\033[0m\n", s.Raw)
 	}
 
-	suggest.Present(s, shellName, cfg.AutoRun)
+	suggest.Present(s)
 	return nil
 }
 

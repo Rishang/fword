@@ -20,8 +20,8 @@ const (
 	colorBgDark = "\033[48;5;235m"
 )
 
-// Present prints suggestions in plain text only.
-func Present(s *ai.Suggestion, _ string, _ bool) bool {
+// Present prints the AI suggestion to stdout.
+func Present(s *ai.Suggestion) {
 	switch s.Kind {
 	case "fix":
 		if len(s.Commands) > 0 {
@@ -34,7 +34,6 @@ func Present(s *ai.Suggestion, _ string, _ bool) bool {
 	default:
 		fmt.Println(s.Raw)
 	}
-	return false
 }
 
 // PrintError prints a styled error to stderr
@@ -42,9 +41,5 @@ func PrintError(msg string) {
 	fmt.Fprintf(os.Stderr, "\n%s%s✗ fword: %s%s\n\n", colorBold, colorRed, colorReset, msg)
 }
 
-// PrintSpinner is intentionally a no-op to keep output plain.
-func PrintSpinner(provider, model string) func() {
-	_ = provider
-	_ = model
-	return func() {}
-}
+// PrintSpinner is a no-op placeholder; kept for future animated spinner support.
+func PrintSpinner(_, _ string) func() { return func() {} }

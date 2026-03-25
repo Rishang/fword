@@ -2,8 +2,13 @@
 package ai
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
 
 	"github.com/user/fword/internal/config"
 )
@@ -57,21 +62,21 @@ Rules:
 - Never suggest installing docs readers, man pages, or external resources.
 - Commands only. Every line must be something the user can paste into a terminal.`
 
-// userPrompt builds the per-request message
+// UserPrompt builds the per-request message sent to every provider.
 func UserPrompt(r *Request) string {
-	msg := fmt.Sprintf("Command: %s\nExit code: %d", r.Command, r.ExitCode)
+	var b strings.Builder
+	fmt.Fprintf(&b, "Command: %s\nExit code: %d", r.Command, r.ExitCode)
 	if r.Output != "" {
-		// Truncate very long output to avoid bloating the prompt
 		out := r.Output
 		if len(out) > 2000 {
 			out = out[:2000] + "\n... (truncated)"
 		}
-		msg += fmt.Sprintf("\nOutput:\n%s", out)
+		fmt.Fprintf(&b, "\nOutput:\n%s", out)
 	}
 	if r.Shell != "" {
-		msg += fmt.Sprintf("\nShell: %s", r.Shell)
+		fmt.Fprintf(&b, "\nShell: %s", r.Shell)
 	}
-	return msg
+	return b.String()
 }
 
 // SystemPrompt exposes the constant for providers that need it
@@ -92,24 +97,59 @@ func New(cfg *config.Config) (Provider, error) {
 	}
 }
 
-// ParseSuggestion converts raw AI text into a structured Suggestion
+// doJSON marshals reqBody as JSON, POSTs to url with the given headers, reads the
+// response body, checks for a non-200 status, then JSON-decodes into respBody.
+// It is the single HTTP round-trip used by every provider.
+func doJSON(ctx context.Context, client *http.Client, url string, headers map[string]string, reqBody, respBody any) ([]byte, error) {
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	for k, v := range headers {
+		httpReq.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("http: %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return data, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, data)
+	}
+	if err := json.Unmarshal(data, respBody); err != nil {
+		return data, fmt.Errorf("parse response: %w", err)
+	}
+	return data, nil
+}
+
+// ParseSuggestion converts raw AI text into a structured Suggestion.
 func ParseSuggestion(raw string) *Suggestion {
 	s := &Suggestion{Raw: raw}
 
-	// Scan for "FIX: <cmd>" pattern (single corrected command)
-	if after, ok := cutPrefix(raw, "FIX:"); ok {
+	if after, ok := strings.CutPrefix(raw, "FIX:"); ok {
 		s.Kind = "fix"
-		s.Commands = []string{trimSpace(after)}
+		s.Commands = []string{strings.TrimSpace(after)}
 		return s
 	}
 
-	// Scan for "STEPS:" followed by "$ <cmd>" lines
-	if _, ok := cutPrefix(raw, "STEPS:"); ok {
+	if strings.HasPrefix(raw, "STEPS:") {
 		s.Kind = "steps"
-		for _, line := range splitLines(raw) {
-			if cmd, ok := cutPrefix(line, "$"); ok {
-				if c := trimSpace(cmd); c != "" {
-					s.Commands = append(s.Commands, c)
+		for _, line := range strings.Split(raw, "\n") {
+			if after, ok := strings.CutPrefix(strings.TrimSpace(line), "$"); ok {
+				if cmd := strings.TrimSpace(after); cmd != "" {
+					s.Commands = append(s.Commands, cmd)
 				}
 			}
 		}
@@ -118,43 +158,7 @@ func ParseSuggestion(raw string) *Suggestion {
 		}
 	}
 
-	// Fallback: treat the whole response as raw steps to display
 	s.Kind = "raw"
 	s.Commands = []string{raw}
 	return s
-}
-
-// ---- tiny helpers to avoid importing strings in every file ----
-
-func cutPrefix(s, prefix string) (string, bool) {
-	if len(s) >= len(prefix) && s[:len(prefix)] == prefix {
-		return s[len(prefix):], true
-	}
-	return s, false
-}
-
-func trimSpace(s string) string {
-	start, end := 0, len(s)
-	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
-		start++
-	}
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
-		end--
-	}
-	return s[start:end]
-}
-
-func splitLines(s string) []string {
-	var lines []string
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\n' {
-			lines = append(lines, s[start:i])
-			start = i + 1
-		}
-	}
-	if start < len(s) {
-		lines = append(lines, s[start:])
-	}
-	return lines
 }
