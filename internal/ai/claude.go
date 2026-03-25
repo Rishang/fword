@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/user/fword/internal/config"
+	"github.com/Rishang/fword/internal/config"
 )
 
 type Claude struct {

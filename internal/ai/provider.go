@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/user/fword/internal/config"
+	"github.com/Rishang/fword/internal/config"
 )
 
 // Suggestion is the structured response from any AI provider

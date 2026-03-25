@@ -11,10 +11,10 @@ import (
 	"time"
 
 	cli "github.com/urfave/cli/v2"
-	"github.com/user/fword/internal/ai"
-	"github.com/user/fword/internal/config"
-	"github.com/user/fword/internal/shell"
-	"github.com/user/fword/internal/suggest"
+	"github.com/Rishang/fword/internal/ai"
+	"github.com/Rishang/fword/internal/config"
+	"github.com/Rishang/fword/internal/shell"
+	"github.com/Rishang/fword/internal/suggest"
 )
 
 // version is set at build time via: go build -ldflags "-X main.version=v1.0.0"

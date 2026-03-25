@@ -1,4 +1,4 @@
-module github.com/user/fword
+module github.com/Rishang/fword
 
 go 1.21
 

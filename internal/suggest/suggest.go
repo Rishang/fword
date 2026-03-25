@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/user/fword/internal/ai"
+	"github.com/Rishang/fword/internal/ai"
 )
 
 // ANSI color codes — kept as constants so the whole file stays dependency-free
