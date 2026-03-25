@@ -16,20 +16,56 @@ git push origin main
 
 ## Install
 
+### With [install-release](https://pypi.org/project/install-release/) (`ir`)
+
+[install-release](https://github.com/Rishang/install-release) installs release binaries from GitHub for your OS and CPU. The CLI command is **`ir`**.
+
+Prerequisites: Python 3.9+, `pip`, and [libmagic](https://github.com/ahupp/python-magic#installation) (see the install-release readme).
+
+```bash
+pip install -U install-release
+```
+
+Binaries go to `~/bin` by default — put that on your `PATH` (e.g. in `~/.bashrc` or `~/.zshrc`):
+
+```bash
+export PATH="$HOME/bin:$PATH"
+```
+
+Install or upgrade **fword** from the latest GitHub release:
+
+```bash
+ir get https://github.com/Rishang/fword
+```
+
+Useful follow-ups: `ir ls`, `ir upgrade`, `ir rm fword`. Use `ir get --help` for flags (e.g. `-f` to pick a specific release asset).
+
+### Pre-built binary (manual)
+
+Each [release](https://github.com/Rishang/fword/releases/latest) ships plain binaries and a `SHA256SUMS` file. Pick the name that matches your platform:
+
+| Platform   | Asset                 |
+|------------|------------------------|
+| Linux x64  | `fword-linux-amd64`    |
+| Linux arm64| `fword-linux-arm64`    |
+| macOS x64  | `fword-darwin-amd64`   |
+| macOS arm64| `fword-darwin-arm64`   |
+
+Example (Linux x86_64):
+
+```bash
+curl -fL -o fword https://github.com/Rishang/fword/releases/latest/download/fword-linux-amd64
+chmod +x fword
+sudo mv fword /usr/local/bin/   # or another directory on your PATH
+```
+
+
 ### From source (requires Go 1.21+)
 
 ```bash
-git clone https://github.com/user/fword
+git clone https://github.com/Rishang/fword
 cd fword
 task install        # installs to $(go env GOPATH)/bin/fword
-```
-
-### Pre-built binary
-
-```bash
-# Linux amd64
-curl -Lo fword https://github.com/user/fword/releases/latest/download/fword-linux-amd64
-chmod +x fword && sudo mv fword /usr/local/bin/
 ```
 
 ---

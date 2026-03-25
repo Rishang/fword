@@ -51,7 +51,8 @@ tasks:
       - GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build {{.BUILD_FLAGS}} -o dist/fword-linux-arm64 {{.CMD}}
       - GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build {{.BUILD_FLAGS}} -o dist/fword-darwin-amd64 {{.CMD}}
       - GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build {{.BUILD_FLAGS}} -o dist/fword-darwin-arm64 {{.CMD}}
-      - sha256sum dist/fword-linux-amd64 dist/fword-linux-arm64 dist/fword-darwin-amd64 dist/fword-darwin-arm64 > dist/SHA256SUMS
+      # Basenames only so `sha256sum -c SHA256SUMS` works next to downloaded release assets
+      - cd dist && sha256sum fword-linux-amd64 fword-linux-arm64 fword-darwin-amd64 fword-darwin-arm64 > SHA256SUMS
       - echo "✓  Release binaries in ./dist/"
       - ls -la dist/
 
