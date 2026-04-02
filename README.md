@@ -151,6 +151,38 @@ fword --cmd "cargo build" --exit-code 101 --debug    # show raw AI response
 
 ---
 
+## `fword cat` — file-to-prompt formatter
+
+Concatenate files or a directory into a prompt-ready string, with each file
+wrapped in `<file path>…</file path>` tags.  Pipe the output directly into
+your AI prompt or clipboard.
+
+```bash
+# Explicit files (like cat)
+fword cat go.mod go.sum
+
+# Walk a directory (respects .gitignore when inside a git repo)
+fword cat ./internal
+fword cat internal/
+
+# Walk current directory (default when no args given)
+fword cat
+```
+
+Example output:
+
+```
+<file go.mod>
+module github.com/Rishang/fword
+...
+</file go.mod>
+<file internal/config/config.go>
+...
+</file internal/config/config.go>
+```
+
+---
+
 ## How it works
 
 1. Shell hook (`PROMPT_COMMAND` / `precmd`) records the last command and its exit code into env vars.
