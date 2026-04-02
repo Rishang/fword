@@ -1,4 +1,4 @@
-# fk
+# fk 🐷
 
 AI-powered shell command corrector. After you run a command, `fk` asks an AI model for a fix and prints corrected command(s) as plain text.
 
