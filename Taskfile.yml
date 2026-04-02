@@ -72,6 +72,7 @@ tasks:
     cmds:
       - go build -trimpath {{.LDFLAGS}} -o {{.BINARY}} {{.CMD}}
       - echo "✓  Built ./{{.BINARY}}  ({{.VERSION}})"
+      - mv fword dist/ || true
 
   # Print current config path
   config-path:
