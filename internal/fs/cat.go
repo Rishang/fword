@@ -21,7 +21,6 @@ func FilesFromDir(dir string) ([]string, error) {
 	if info, err := os.Stat(abs); err != nil || !info.IsDir() {
 		return nil, fmt.Errorf("%q is not a directory", dir)
 	}
-
 	if files, err := gitLsFiles(abs); err == nil {
 		return files, nil
 	}
@@ -46,11 +45,15 @@ func gitLsFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
-// walkDir walks dir recursively, skipping hidden files and directories.
+// walkDir walks dir recursively, skipping hidden files/directories and
+// any entries that cannot be accessed due to permission errors.
 func walkDir(dir string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			if os.IsPermission(err) {
+				return nil // skip permission-denied entries silently
+			}
 			return err
 		}
 		name := info.Name()
@@ -71,28 +74,28 @@ func walkDir(dir string) ([]string, error) {
 
 // Format reads each path and returns a prompt-ready string where every file
 // is wrapped in <file path>…</file path> tags. Paths are displayed relative
-// to baseDir. Binary files (those containing null bytes) are silently skipped.
+// to baseDir. Binary files and permission-denied files are silently skipped.
 func Format(paths []string, baseDir string) (string, error) {
 	abs, err := filepath.Abs(baseDir)
 	if err != nil {
 		abs = baseDir
 	}
-
 	var sb strings.Builder
 	for _, p := range paths {
 		content, err := os.ReadFile(p)
 		if err != nil {
+			if os.IsPermission(err) {
+				continue // skip permission-denied files silently
+			}
 			return "", fmt.Errorf("reading %s: %w", p, err)
 		}
 		if !utf8.Valid(content) {
 			continue // skip non-UTF-8/ASCII files (binary, encoded data, etc.)
 		}
-
 		rel, err := filepath.Rel(abs, p)
 		if err != nil {
 			rel = p
 		}
-
 		fmt.Fprintf(&sb, "<file %s>\n%s\n</file %s>\n", rel, content, rel)
 	}
 	return sb.String(), nil
