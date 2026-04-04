@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Rishang/fk/internal/config"
+	"github.com/Rishang/fk/internal/logger"
 )
 
 type Gemini struct {
@@ -59,12 +60,18 @@ func (g *Gemini) Query(ctx context.Context, req *Request) (*Suggestion, error) {
 		model = "gemini-1.5-flash"
 	}
 
+	system := SystemPrompt()
+	user := UserPrompt(req)
+	logger.Debug("gemini input", "system_tokens", (len(system)+3)/4, "user_tokens", (len(user)+3)/4, "total_tokens", (len(system)+len(user)+3)/4)
+	logger.Debug("gemini system prompt", "content", system)
+	logger.Debug("gemini user prompt", "content", user)
+
 	body := geminiRequest{
 		SystemInstruction: &geminiContent{
-			Parts: []geminiPart{{Text: SystemPrompt()}},
+			Parts: []geminiPart{{Text: system}},
 		},
 		Contents: []geminiContent{
-			{Role: "user", Parts: []geminiPart{{Text: UserPrompt(req)}}},
+			{Role: "user", Parts: []geminiPart{{Text: user}}},
 		},
 		GenerationConfig: geminiGenConfig{MaxOutputTokens: g.cfg.MaxTokens},
 	}
@@ -82,5 +89,7 @@ func (g *Gemini) Query(ctx context.Context, req *Request) (*Suggestion, error) {
 	if len(gr.Candidates) == 0 || len(gr.Candidates[0].Content.Parts) == 0 {
 		return nil, fmt.Errorf("gemini: empty response")
 	}
-	return ParseSuggestion(gr.Candidates[0].Content.Parts[0].Text), nil
+	out := gr.Candidates[0].Content.Parts[0].Text
+	logger.Debug("gemini output", "tokens", (len(out)+3)/4, "content", out)
+	return ParseSuggestion(out), nil
 }

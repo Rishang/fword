@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Rishang/fk/internal/config"
+	"github.com/Rishang/fk/internal/logger"
 )
 
 type OpenAI struct {
@@ -45,12 +46,18 @@ type openAIResponse struct {
 }
 
 func (o *OpenAI) Query(ctx context.Context, req *Request) (*Suggestion, error) {
+	system := SystemPrompt()
+	user := UserPrompt(req)
+	logger.Debug("openai input", "system_tokens", (len(system)+3)/4, "user_tokens", (len(user)+3)/4, "total_tokens", (len(system)+len(user)+3)/4)
+	logger.Debug("openai system prompt", "content", system)
+	logger.Debug("openai user prompt", "content", user)
+
 	body := openAIRequest{
 		Model:     o.cfg.Model,
 		MaxTokens: o.cfg.MaxTokens,
 		Messages: []openAIMessage{
-			{Role: "system", Content: SystemPrompt()},
-			{Role: "user", Content: UserPrompt(req)},
+			{Role: "system", Content: system},
+			{Role: "user", Content: user},
 		},
 	}
 
@@ -73,5 +80,7 @@ func (o *OpenAI) Query(ctx context.Context, req *Request) (*Suggestion, error) {
 	if len(or.Choices) == 0 {
 		return nil, fmt.Errorf("openai: empty choices in response")
 	}
-	return ParseSuggestion(or.Choices[0].Message.Content), nil
+	out := or.Choices[0].Message.Content
+	logger.Debug("openai output", "tokens", (len(out)+3)/4, "content", out)
+	return ParseSuggestion(out), nil
 }

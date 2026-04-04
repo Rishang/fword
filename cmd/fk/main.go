@@ -13,6 +13,7 @@ import (
 	"github.com/Rishang/fk/internal/ai"
 	"github.com/Rishang/fk/internal/config"
 	"github.com/Rishang/fk/internal/fs"
+	"github.com/Rishang/fk/internal/logger"
 	"github.com/Rishang/fk/internal/shell"
 	"github.com/Rishang/fk/internal/suggest"
 	cli "github.com/urfave/cli/v3"
@@ -32,6 +33,7 @@ func main() {
 // showCfg is shared between `config` and `config show` to avoid duplication.
 func run(args []string) error {
 	showCfg := func(_ context.Context, _ *cli.Command) error { return configShow() }
+	cli.VersionFlag = &cli.BoolFlag{Name: "version", Usage: "print the version"}
 	app := &cli.Command{
 		Name: "fk", Usage: "AI-powered shell command corrector", Version: version,
 		Action: runMain,
@@ -44,6 +46,7 @@ func run(args []string) error {
 			&cli.StringFlag{Name: "shell", Usage: "Override shell detection (bash|zsh|fish)"},
 			&cli.BoolFlag{Name: "auto-run", Usage: "Execute suggestion without confirmation prompt"},
 			&cli.BoolFlag{Name: "debug", Usage: "Print raw AI response before parsing"},
+			&cli.BoolFlag{Name: "verbose", Aliases: []string{"v"}, Usage: "Print prompts sent to LLM and token estimates"},
 		},
 		Commands: []*cli.Command{
 			{
@@ -89,6 +92,13 @@ func run(args []string) error {
 						}},
 				},
 			}},
+	}
+	// Set debug level before running so all packages respect it.
+	for _, arg := range args {
+		if arg == "--verbose" || arg == "-v" {
+			logger.SetDebug(true)
+			break
+		}
 	}
 	return app.Run(context.Background(), args)
 }
@@ -146,6 +156,10 @@ func runMain(_ context.Context, c *cli.Command) error {
 	cmd, err := resolveCmd(shellName)
 	if err != nil {
 		return err
+	}
+	if isFkCommand(cmd) {
+		fmt.Println("fk can't fk")
+		return nil
 	}
 
 	exitCode, err := resolveExitCode(c, shellName)

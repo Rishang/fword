@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Rishang/fk/internal/config"
+	"github.com/Rishang/fk/internal/logger"
 )
 
 type Claude struct {
@@ -43,11 +44,17 @@ type claudeResponse struct {
 }
 
 func (c *Claude) Query(ctx context.Context, req *Request) (*Suggestion, error) {
+	system := SystemPrompt()
+	user := UserPrompt(req)
+	logger.Debug("claude input", "system_tokens", (len(system)+3)/4, "user_tokens", (len(user)+3)/4, "total_tokens", (len(system)+len(user)+3)/4)
+	logger.Debug("claude system prompt", "content", system)
+	logger.Debug("claude user prompt", "content", user)
+
 	body := claudeRequest{
 		Model:     c.cfg.Model,
 		MaxTokens: c.cfg.MaxTokens,
-		System:    SystemPrompt(),
-		Messages:  []claudeMessage{{Role: "user", Content: UserPrompt(req)}},
+		System:    system,
+		Messages:  []claudeMessage{{Role: "user", Content: user}},
 	}
 
 	var cr claudeResponse
@@ -66,6 +73,7 @@ func (c *Claude) Query(ctx context.Context, req *Request) (*Suggestion, error) {
 	}
 	for _, block := range cr.Content {
 		if block.Type == "text" && block.Text != "" {
+			logger.Debug("claude output", "tokens", (len(block.Text)+3)/4, "content", block.Text)
 			return ParseSuggestion(block.Text), nil
 		}
 	}
