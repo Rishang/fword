@@ -31,7 +31,19 @@ ERROR: Version in "./docker-compose.yml" is unsupported.
 
 $ fk
   docker compose up -d
-  ✔ run it? [y/n]
+
+```
+
+You can also use shell comment to provide prompt as well:
+```
+$ # sync OS system time which currently is wrong
+$ curl https://example.com
+curl: (60) SSL certificate problem: certificate is not yet valid
+
+$ fk
+
+sudo timedatectl set-ntp true
+
 ```
 
 Inspired by [thefuck](https://github.com/nvbn/thefuck). Faster. No Python. No rules to maintain.
@@ -219,12 +231,18 @@ fk config set --provider openai --api-token sk-xxxx --model gpt-4o
 
 ## `fk cat` — files to prompt
 
-Dump files or a directory into a clean `<file>…</file>` format, ready to paste into any AI chat.
+`fk cat` is a separate helper from the command corrector. Its main use case is **bringing local file context into a browser chat** — paste the output into the [ChatGPT](https://chatgpt.com) or [Claude](https://claude.ai) console (or any similar UI) so the model sees your repo without uploading files one by one. It bundles paths into one prompt-friendly blob with clear `<file …>` boundaries. It does **not** call the AI provider you configured for `fk`; it only reads the filesystem and prints to stdout.
+
+**Behavior:**
+
+- **Directories:** In a git repo, files are listed with `git ls-files` so tracked and untracked-but-not-ignored paths match `.gitignore`. Outside git, it walks the tree and skips hidden files and directories.
+- **Files:** Only UTF-8 text is included; binary and permission-denied files are skipped. Paths in the output are relative to the current working directory.
 
 ```bash
 fk cat go.mod go.sum          # specific files
-fk cat ./internal             # walk a directory (respects .gitignore)
-fk cat                        # walk current directory
+fk cat ./internal             # walk a directory (respects .gitignore in repos)
+fk cat                        # walk current directory (.)
+fk cat pkg/ > /tmp/ctx.txt    # paste into ChatGPT / Claude web, etc.
 ```
 
 Output:
